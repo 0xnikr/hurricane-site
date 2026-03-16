@@ -7,6 +7,17 @@ const nextConfig: NextConfig = {
   // Compress responses
   compress: true,
 
+  // Allow Supabase Storage images
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
+
   // Set caching headers for static assets (enables bfcache + CDN caching)
   headers: async () => [
     {

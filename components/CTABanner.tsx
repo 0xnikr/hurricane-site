@@ -1,4 +1,5 @@
 import ScrollReveal from "./ScrollReveal";
+import Link from "next/link";
 
 const cards = [
   {
@@ -63,12 +64,12 @@ export default function CTABanner() {
               }}>
                 {c.description}
               </p>
-              <button className="btn-outline" style={{ fontSize: "0.82rem", padding: "10px 24px" }}>
+              <Link href="/products" className="btn-outline" style={{ fontSize: "0.82rem", padding: "10px 24px", textDecoration: "none" }}>
                 Shop Now
                 <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
-              </button>
+              </Link>
             </div>
           ))}
         </ScrollReveal>

@@ -1,12 +1,47 @@
 import ScrollReveal from "./ScrollReveal";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import type { Product } from "@/lib/types";
+import ProductCard from "./ProductCard";
 
-const products = [
-  { name: "Storm Blend", price: "$29", tag: "Best Seller" },
-  { name: "Typhoon Energy", price: "$24", tag: null },
-  { name: "Cyclone Recovery", price: "$32", tag: "New" },
-];
+export default async function FeaturedProducts() {
+  const supabase = await createSupabaseServer();
 
-export default function FeaturedProducts() {
+  // Fetch featured products from homepage_featured_products table
+  const { data: featured } = await supabase
+    .from("homepage_featured_products")
+    .select("*, product:products(*)")
+    .eq("section_key", "featured")
+    .eq("active", true)
+    .order("sort_order");
+
+  // Fallback: if no featured products configured, get products marked as featured
+  let products: Product[] = [];
+  if (featured && featured.length > 0) {
+    products = featured
+      .map((f: { product: Product | null }) => f.product)
+      .filter(Boolean) as Product[];
+  } else {
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("active", true)
+      .eq("featured", true)
+      .order("sort_order")
+      .limit(3);
+    products = data || [];
+  }
+
+  // Deduplicate by ID (a product could appear in both sources)
+  const seen = new Set<string>();
+  products = products.filter((p) => {
+    if (seen.has(p.id)) return false;
+    seen.add(p.id);
+    return true;
+  });
+
+  // If still no products, show nothing
+  if (products.length === 0) return null;
+
   return (
     <section className="section" style={{ background: "var(--warm-cream)" }}>
       <div className="container">
@@ -29,63 +64,20 @@ export default function FeaturedProducts() {
         </ScrollReveal>
 
         <ScrollReveal stagger style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+          display: "grid", gridTemplateColumns: `repeat(${Math.min(products.length, 3)}, 1fr)`,
           gap: "clamp(16px, 3vw, 32px)",
         }}>
-          {products.map((p, i) => (
-            <div key={i} className="card-hover" style={{
-              background: "var(--off-white)", borderRadius: "var(--radius-lg)",
-              overflow: "hidden", cursor: "pointer",
-            }}>
-              <div style={{
-                aspectRatio: "1 / 1",
-                background: "linear-gradient(145deg, var(--sage-mist) 0%, var(--sage-mist-light) 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                position: "relative", margin: 12, borderRadius: "var(--radius-md)",
-              }}>
-                {p.tag && (
-                  <span style={{
-                    position: "absolute", top: 12, left: 12, padding: "4px 12px",
-                    background: "var(--hurricane-green)", color: "var(--off-white)",
-                    fontFamily: "var(--font-inter), system-ui, sans-serif",
-                    fontSize: "0.7rem", fontWeight: 600, borderRadius: "var(--radius-pill)",
-                    letterSpacing: "0.05em", textTransform: "uppercase",
-                  }}>
-                    {p.tag}
-                  </span>
-                )}
-                <span style={{ fontSize: "3rem" }}>🌿</span>
-              </div>
-              <div style={{ padding: "16px 20px 20px" }}>
-                <h3 style={{
-                  fontFamily: "var(--font-playfair-display), serif",
-                  fontSize: "1.1rem", fontWeight: 600, color: "var(--text-dark)", marginBottom: 4,
-                }}>
-                  {p.name}
-                </h3>
-                <p style={{
-                  fontFamily: "var(--font-inter), system-ui, sans-serif",
-                  fontSize: "0.95rem", color: "var(--text-muted)", marginBottom: 16,
-                }}>
-                  {p.price}
-                </p>
-                <button className="btn-primary" style={{ width: "100%", justifyContent: "center", padding: "12px 24px", fontSize: "0.85rem" }}>
-                  Shop Now
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} tag={p.featured ? "Featured" : null} />
           ))}
         </ScrollReveal>
       </div>
       <style>{`
         @media (max-width: 640px) {
-          .container div[style*="grid-template-columns: repeat(3"] { grid-template-columns: 1fr !important; max-width: 360px; margin: 0 auto; }
+          .container div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; max-width: 360px; margin: 0 auto; }
         }
         @media (min-width: 641px) and (max-width: 900px) {
-          .container div[style*="grid-template-columns: repeat(3"] { grid-template-columns: repeat(2, 1fr) !important; }
+          .container div[style*="grid-template-columns"] { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
     </section>

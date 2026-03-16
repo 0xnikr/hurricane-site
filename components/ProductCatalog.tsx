@@ -1,26 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createSupabaseBrowser } from "@/lib/supabase/client";
+import type { Product } from "@/lib/types";
+import ProductCard from "./ProductCard";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
-
-const categories = ["All Products", "Energy", "Recovery", "Immunity", "Focus", "Detox"];
-
-const allProducts = [
-  { name: "Holocena", price: "$17.50", category: "Energy" },
-  { name: "Notorius", price: "$22.50", category: "Recovery" },
-  { name: "Radiant", price: "$20.50", category: "Immunity" },
-  { name: "Tempest Vigor", price: "$28.00", category: "Focus" },
-  { name: "Gale Force", price: "$19.00", category: "Energy" },
-  { name: "Eye of Storm", price: "$31.00", category: "Detox" },
-];
 
 export default function ProductCatalog() {
   const ref = useScrollReveal();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [active, setActive] = useState("All Products");
+  const [loaded, setLoaded] = useState(false);
 
-  const filtered = active === "All Products"
-    ? allProducts
-    : allProducts.filter((p) => p.category === active);
+  useEffect(() => {
+    async function load() {
+      const supabase = createSupabaseBrowser();
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order");
+
+      if (data) {
+        setProducts(data);
+        const cats = [...new Set(data.map((p) => p.category).filter(Boolean))] as string[];
+        setCategories(cats);
+      }
+      setLoaded(true);
+    }
+    load();
+  }, []);
+
+  const filtered =
+    active === "All Products"
+      ? products
+      : products.filter((p) => p.category === active);
 
   return (
     <section ref={ref} id="products" className="section" style={{ background: "var(--warm-cream)" }}>
@@ -64,9 +79,9 @@ export default function ProductCatalog() {
             marginTop: 28,
           }}
         >
-          {categories.map((cat) => (
+          {["All Products", ...categories].map((cat) => (
             <button
-              id={`filter-${cat.toLowerCase().replace(" ", "-")}`}
+              id={`filter-${cat.toLowerCase().replace(/ /g, "-")}`}
               key={cat}
               onClick={() => setActive(cat)}
               style={{
@@ -96,61 +111,15 @@ export default function ProductCatalog() {
             gap: "clamp(16px, 3vw, 32px)",
           }}
         >
-          {filtered.map((p, i) => (
-            <div
-              key={`${p.name}-${i}`}
-              className="card-hover"
-              style={{
-                background: "var(--off-white)",
-                borderRadius: "var(--radius-lg)",
-                overflow: "hidden",
-                cursor: "pointer",
-              }}
-            >
-              <div
-                style={{
-                  aspectRatio: "1 / 1",
-                  background: "linear-gradient(145deg, var(--sage-mist) 0%, var(--sage-mist-light) 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: 12,
-                  borderRadius: "var(--radius-md)",
-                }}
-              >
-                <span style={{ fontSize: "3rem" }}>🌿</span>
-              </div>
-              <div style={{ padding: "16px 20px 20px" }}>
-                <h3
-                  style={{
-                    fontFamily: "var(--font-playfair-display), serif",
-                    fontSize: "1.05rem",
-                    fontWeight: 600,
-                    color: "var(--text-dark)",
-                    marginBottom: 4,
-                  }}
-                >
-                  {p.name}
-                </h3>
-                <p
-                  style={{
-                    fontFamily: "var(--font-inter), system-ui, sans-serif",
-                    fontSize: "0.9rem",
-                    color: "var(--text-muted)",
-                    marginBottom: 16,
-                  }}
-                >
-                  {p.price}
-                </p>
-                <button className="btn-primary" style={{ width: "100%", justifyContent: "center", padding: "11px 20px", fontSize: "0.82rem" }}>
-                  Shop Now
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          ))}
+          {loaded && filtered.length === 0 ? (
+            <p style={{ gridColumn: "1/-1", textAlign: "center", color: "#9ca3af", padding: 40 }}>
+              No products found.
+            </p>
+          ) : (
+            filtered.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          )}
         </div>
       </div>
       <style>{`

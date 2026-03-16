@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useCart } from "@/lib/cart-context";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { cartCount, setCartOpen } = useCart();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 60);
@@ -94,8 +96,36 @@ export default function Navbar() {
               {item}
             </Link>
           ))}
-          <button className="btn-primary" style={{ padding: "10px 24px", fontSize: "0.85rem" }}>
+          <Link href="/products" className="btn-primary" style={{ padding: "10px 24px", fontSize: "0.85rem", textDecoration: "none" }}>
             Shop Now
+          </Link>
+          <button
+            onClick={() => setCartOpen(true)}
+            style={{
+              position: "relative",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              padding: 8,
+              color: scrolled ? "var(--deep-forest)" : "#f0e8d8",
+              transition: "color 0.3s ease",
+            }}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+            </svg>
+            {cartCount > 0 && (
+              <span style={{
+                position: "absolute", top: 0, right: 0,
+                background: "#dc2626", color: "white",
+                width: 18, height: 18, borderRadius: "50%",
+                fontSize: "0.65rem", fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                {cartCount}
+              </span>
+            )}
           </button>
         </div>
 
